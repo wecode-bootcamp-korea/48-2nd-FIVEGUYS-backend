@@ -18,7 +18,7 @@ const getAllApplications = async (userId) => {
         LEFT JOIN applications AS a ON u.id = a.user_id
         LEFT JOIN job_postings AS j ON a.job_posting_id = j.id
         LEFT JOIN companies AS c ON j.company_id = c.id
-      WHERE status = ? AND u.id = ? 
+      WHERE u.id = ? 
       GROUP BY u.id
       ORDER BY a.created_at DESC;
         `,
@@ -34,7 +34,7 @@ const getAllApplications = async (userId) => {
 };
 
 //Applications 
-const getApplications = async (userId, status) => {
+const getApplicationsByStatus = async (userId, status) => {
   try {
     const [result] = await dataSource.query( 
       `
@@ -56,6 +56,38 @@ const getApplications = async (userId, status) => {
       ORDER BY a.created_at DESC;
         `,
       [status, userId]
+     );
+    return result;
+  } catch (err) {
+    console.log(err)
+    const error = new Error('dataSource Error');
+    error.statusCode = 400;
+    throw error;
+  }
+};
+
+const getApplicationsByPostId = async (userId, jobPostingId) => {
+  try {
+    const [result] = await dataSource.query( 
+      `
+      SELECT
+        u.username,
+        c.name AS company_name,
+        j.title,
+        a.job_posting_id,
+        a.resume_id,
+        a.created_at,
+        COUNT(job_posting_id)
+      FROM
+        users AS u
+        LEFT JOIN applications AS a ON u.id = a.user_id
+        LEFT JOIN job_postings AS j ON a.job_posting_id = j.id
+        LEFT JOIN companies AS c ON j.company_id = c.id
+      WHERE j.id = ? AND u.id = ? 
+      GROUP BY u.id
+      ORDER BY a.created_at DESC;
+        `,
+      [jobPostingId, userId]
      );
     return result;
   } catch (err) {
@@ -171,7 +203,8 @@ const createScrap = async (companyId, title, jobPostingId, prefferedSkills) => {
 
 module.exports = {
   getAllApplications,
-  getApplications,
+  getApplicationsByStatus,
+  getApplicationsByPostId,
   updateApplication,
   createApplication,
   createScrap
